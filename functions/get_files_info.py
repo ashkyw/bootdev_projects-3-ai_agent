@@ -1,0 +1,39 @@
+import os
+
+
+def get_files_info(working_directory, directory="."):
+    try:
+        # get absolute path of working directory
+        absolute_path = os.path.abspath(working_directory)
+    except Exception:
+        return "Error: Invalid working directory"
+    try:
+        # get normalized, joined path of absolute path and directory
+        target_directory = os.path.normpath(os.path.join(absolute_path, directory))
+    except Exception:
+        return "Error: Invalid directory"
+    try:
+        # check if target directory is in the absolute path
+        valid_path = (
+            os.path.commonpath([absolute_path, target_directory]) == absolute_path
+        )
+    except Exception:
+        return "Error: No common path found"
+
+    # Safeguards to prevent LLM from running amok in system
+    if not valid_path:
+        return f"Error: Cannot list {directory} as it is outside the permitted working directory"
+
+    if not directory:
+        return f"Error: {directory} is not a directory"
+
+    directory_contents = os.listdir(target_directory)
+
+    print(f"Results for {directory} directory")
+
+    for item in directory_contents:
+        item_path = target_directory + "/" + item
+
+        is_directory = os.path.isdir(item_path)
+        file_size = os.path.getsize(item_path)
+        return f"- {item}: file_size={file_size} bytes, is_dir={is_directory}"
