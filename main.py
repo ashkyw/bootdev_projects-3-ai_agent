@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+import call_functions as call
+from prompts import system_prompt
+
 # Set API key from user environment
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -26,6 +29,11 @@ client = genai.Client(api_key=api_key)
 response = client.models.generate_content(
     model="gemini-2.5-flash",
     contents=messages,
+    config=types.GenerateContentConfig(
+        tools=[call.available_functions],
+        system_instruction=system_prompt,
+        temperature=0,
+    ),
 )
 
 # Set metadata variables using response's metadata
@@ -43,7 +51,11 @@ def main():
         print(f"Prompt tokens: {prompt_tokens}")
         print(f"Response tokens: {candidate_tokens}")
 
-    print(response.text)
+    if response.function_calls != None:
+        for call in response.function_calls:
+            print(f"Calling function: {call.name}({call.args})")
+    else:
+        print(response.text)
 
 
 if __name__ == "__main__":
