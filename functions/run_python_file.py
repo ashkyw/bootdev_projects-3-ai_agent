@@ -3,6 +3,7 @@ import subprocess
 
 from google.genai import types
 
+# Define run_python_file schema for LLM
 schema_run_python_file = types.FunctionDeclaration(
     name="run_python_file",
     description="Runs specified python file in a path relative to the working directory.",
@@ -52,20 +53,20 @@ def run_python_file(working_directory, file_path, args=None):
     if not valid_path:
         return f'Error: Cannot execute "{file_path}" as it is outside the permitted working directory'
 
-    if not os.path.isfile(file_path):
+    if not os.path.isfile(target_path):
         return f'Error:  "{file_path}" does not exist or is not a regular file'
 
-    try:
-        dir_name, file_name = file_path.split("/")
-        parent_directory = os.path.join(working_directory, dir_name)
-        target_file = os.path.join(parent_directory, file_name)
+    #    try:
+    #        dir_name, file_name = file_path.split("/")
+    #        parent_directory = os.path.join(working_directory, dir_name)
+    #        target_file = os.path.join(parent_directory, file_name)
 
-    except ValueError:
-        parent_directory = working_directory
-        target_file = os.path.join(working_directory, file_path)
+    #    except ValueError:
+    #        parent_directory = working_directory
+    #        target_file = os.path.join(working_directory, file_path)
 
     # Build command to execute Python file
-    command = ["python", target_file]
+    command = ["python", target_path]
     if args:
         command.extend(args)
 

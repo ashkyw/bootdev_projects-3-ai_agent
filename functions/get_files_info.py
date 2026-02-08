@@ -2,6 +2,7 @@ import os
 
 from google.genai import types
 
+# Define get_files_info schema for LLM
 schema_get_files_info = types.FunctionDeclaration(
     name="get_files_info",
     description="Lists files in a specified directory relative to the working directory, providing file size and directory status",
@@ -45,11 +46,14 @@ def get_files_info(working_directory, directory="."):
 
     directory_contents = os.listdir(target_directory)
 
-    print(f"Results for {directory} directory")
-
+    file_info = []
     for item in directory_contents:
-        item_path = target_directory + "/" + item
+        item_path = os.path.join(target_directory, item)
 
         is_directory = os.path.isdir(item_path)
         file_size = os.path.getsize(item_path)
-        return f"- {item}: file_size={file_size} bytes, is_dir={is_directory}"
+        file_info.append(
+            f"- {item}: file_size={file_size} bytes, is_dir={is_directory}"
+        )
+
+    return "\n".join(file_info)

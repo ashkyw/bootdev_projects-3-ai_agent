@@ -4,6 +4,7 @@ from google.genai import types
 
 from config import MAX_CHARS
 
+# Define get_file_content schema for LLM
 schema_get_file_content = types.FunctionDeclaration(
     name="get_file_content",
     description="Lists file content in a path relative to the working directory, providing file text as a string.",

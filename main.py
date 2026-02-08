@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-import call_functions as call
+from call_functions import available_functions, call_function
 from prompts import system_prompt
 
 # Set API key from user environment
@@ -30,7 +30,7 @@ response = client.models.generate_content(
     model="gemini-2.5-flash",
     contents=messages,
     config=types.GenerateContentConfig(
-        tools=[call.available_functions],
+        tools=[available_functions],
         system_instruction=system_prompt,
         temperature=0,
     ),
@@ -46,16 +46,25 @@ def main():
     if usage_metadata == None:
         raise RuntimeError("API request failed")
 
+    function_call_results_list = []
+
+    if response.function_calls:
+        for function_call in response.function_calls:
+            result = call_function(function_call, args.verbose)
+            if (
+                result.parts is None
+                or result.parts[0].function_response is None
+                or result.parts[0].function_response.response is None
+            ):
+                raise Exception(f"Empty function response for {function_call.name}")
+
+        function_call_results_list.append(result.parts[0])
+
     if args.verbose:
+        print(f"-> {result.parts[0].function_response.response}")
         print(f"User prompt: {args.user_prompt}")
         print(f"Prompt tokens: {prompt_tokens}")
         print(f"Response tokens: {candidate_tokens}")
-
-    if response.function_calls != None:
-        for call in response.function_calls:
-            print(f"Calling function: {call.name}({call.args})")
-    else:
-        print(response.text)
 
 
 if __name__ == "__main__":

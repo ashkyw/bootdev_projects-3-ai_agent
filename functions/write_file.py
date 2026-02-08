@@ -2,6 +2,7 @@ import os
 
 from google.genai import types
 
+# Define write_file schema for LLM
 schema_write_file = types.FunctionDeclaration(
     name="write_file",
     description="Writes text to a file in a path relative to the working directory.",
