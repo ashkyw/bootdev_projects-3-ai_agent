@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -24,47 +25,72 @@ args = parser.parse_args()
 # Create a list of messages and responses from argparser
 messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
-# Set AI client and response
+# Set AI client
 client = genai.Client(api_key=api_key)
-response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=messages,
-    config=types.GenerateContentConfig(
-        tools=[available_functions],
-        system_instruction=system_prompt,
-        temperature=0,
-    ),
-)
 
-# Set metadata variables using response's metadata
-usage_metadata = response.usage_metadata
-prompt_tokens = response.usage_metadata.prompt_token_count
-candidate_tokens = response.usage_metadata.candidates_token_count
+got_final_answer = False
 
 
 def main():
-    if usage_metadata == None:
-        raise RuntimeError("API request failed")
+    for _ in range(20):
+        function_call_results_list = []
 
-    function_call_results_list = []
+        # Set AI messages and response
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[available_functions],
+                system_instruction=system_prompt,
+                temperature=0,
+            ),
+        )
 
-    if response.function_calls:
-        for function_call in response.function_calls:
-            result = call_function(function_call, args.verbose)
-            if (
-                result.parts is None
-                or result.parts[0].function_response is None
-                or result.parts[0].function_response.response is None
-            ):
-                raise Exception(f"Empty function response for {function_call.name}")
+        usage_metadata = response.usage_metadata
 
-        function_call_results_list.append(result.parts[0])
+        if usage_metadata == None:
+            raise RuntimeError("API request failed")
 
-    if args.verbose:
-        print(f"-> {result.parts[0].function_response.response}")
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {prompt_tokens}")
-        print(f"Response tokens: {candidate_tokens}")
+        # Set metadata variables using response's metadata
+        prompt_tokens = usage_metadata.prompt_token_count
+        candidate_tokens = usage_metadata.candidates_token_count
+
+        if response.candidates is not None:
+            for candidate in response.candidates:
+                messages.append(candidate.content)
+
+        if response.function_calls:
+            for function_call in response.function_calls:
+                result = call_function(function_call, args.verbose)
+                if (
+                    result.parts is None
+                    or result.parts[0].function_response is None
+                    or result.parts[0].function_response.response is None
+                ):
+                    raise Exception(f"Empty function response for {function_call.name}")
+                else:
+                    function_call_results_list.append(result.parts[0])
+
+            messages.append(
+                types.Content(role="user", parts=function_call_results_list)
+            )
+
+            if args.verbose:
+                print(
+                    f"-> {result.parts[0].function_response.response}\n"
+                    f"User prompt: {args.user_prompt}\n"
+                    f"Prompt tokens: {prompt_tokens}\n"
+                    f"Response tokens: {candidate_tokens}\n"
+                )
+
+        else:
+            print(response.text)
+            got_final_answer = True
+            break
+
+    if not got_final_answer:
+        print("Agent hit max iterations without a final answer")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
